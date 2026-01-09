@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  aimharder-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aimharder-sync
+    restart: unless-stopped
+    environment:
+      # Aimharder credentials (REQUIRED)
+      - AIMHARDER_EMAIL=${AIMHARDER_EMAIL}
+      - AIMHARDER_PASSWORD=${AIMHARDER_PASSWORD}
+      
+      # Aimharder box configuration
+      - AIMHARDER_BOX_NAME=${AIMHARDER_BOX_NAME:-valhallatrainingcamp}
+      - AIMHARDER_BOX_ID=${AIMHARDER_BOX_ID:-9818}
+      - AIMHARDER_FAMILY_ID=${AIMHARDER_FAMILY_ID:-}
+      
+      # Strava OAuth credentials (REQUIRED for Strava sync)
+      - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}
+      - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}
+      
+      # Garmin credentials (for future use)
+      - GARMIN_EMAIL=${GARMIN_EMAIL:-}
+      - GARMIN_PASSWORD=${GARMIN_PASSWORD:-}
+      
+      # Timezone (Spain for Aimharder)
+      - TZ=Europe/Madrid
+    volumes:
+      # Persist data (tokens, sync history, TCX files)
+      - aimharder-data:/data
+    ports:
+      # OAuth callback port (required for initial Strava auth)
+      - "8080:8080"
+    # Override default command if needed
+    # command: ["sync", "--days", "7"]
+
+  # Scheduled sync job (runs daily at 6 AM)
+  aimharder-sync-cron:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aimharder-sync-cron
+    restart: unless-stopped
+    environment:
+      - AIMHARDER_EMAIL=${AIMHARDER_EMAIL}
+      - AIMHARDER_PASSWORD=${AIMHARDER_PASSWORD}
+      - AIMHARDER_BOX_NAME=${AIMHARDER_BOX_NAME:-valhallatrainingcamp}
+      - AIMHARDER_BOX_ID=${AIMHARDER_BOX_ID:-9818}
+      - AIMHARDER_FAMILY_ID=${AIMHARDER_FAMILY_ID:-}
+      - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}
+      - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}
+      - TZ=Europe/Madrid
+    volumes:
+      - aimharder-data:/data
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        echo "Starting scheduled sync service..."
+        while true; do
+          # Run at 6:00 AM every day
+          CURRENT_HOUR=$$(date +%H)
+          CURRENT_MIN=$$(date +%M)
+          if [ "$$CURRENT_HOUR" = "06" ] && [ "$$CURRENT_MIN" = "00" ]; then
+            echo "$$(date): Running scheduled sync..."
+            aimharder-sync sync --days 7
+            sleep 60  # Avoid running multiple times in the same minute
+          fi
+          sleep 30  # Check every 30 seconds
+        done
+    profiles:
+      - scheduled  # Only starts with: docker-compose --profile scheduled up
+
+volumes:
+  aimharder-data:
+    driver: local

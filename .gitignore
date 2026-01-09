@@ -1,0 +1,167 @@
+# ============================================
+# Go specific
+# ============================================
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.html
+coverage.txt
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories (uncomment if vendoring)
+# vendor/
+
+# ============================================
+# Project specific binaries
+# ============================================
+# Built application binaries
+aimharder-sync
+aimharder-sync-*
+*-amd64
+*-arm64
+*-linux-*
+*-darwin-*
+
+# Archives
+*.zip
+*.tar.gz
+*.tar.bz2
+
+# ============================================
+# Configuration & Secrets
+# ============================================
+# Environment files with credentials
+.env
+.env.local
+.env.*.local
+
+# Actual configuration files (keep examples)
+configs/config.yaml
+configs/*.yaml
+!configs/*.yaml.example
+
+# ============================================
+# Data & Output files
+# ============================================
+# Data directory contents (may contain sensitive workout data)
+data/*.json
+data/*.xml
+data/*.tcx
+data/*.fit
+data/*.csv
+
+# Keep the directory but ignore contents
+!data/.gitkeep
+
+# ============================================
+# IDE & Editor files
+# ============================================
+# VSCode
+.vscode/
+*.code-workspace
+
+# GoLand / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+.elc
+auto-save-list
+tramp
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ============================================
+# OS specific
+# ============================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ============================================
+# Docker
+# ============================================
+# Docker volumes
+docker/volumes/
+.docker/
+
+# ============================================
+# Logs & Debugging
+# ============================================
+# Log files
+*.log
+logs/
+
+# Profiling files
+*.prof
+*.pprof
+profile.html
+cpu.prof
+mem.prof
+
+# Debug files
+debug
+debug.test
+__debug_bin
+
+# ============================================
+# Temporary files
+# ============================================
+# General temporary files
+*.tmp
+*.temp
+*.cache
+tmp/
+temp/
+
+# ============================================
+# CI/CD & Build artifacts
+# ============================================
+# Build output
+dist/
+build/
+bin/
+
+# ============================================
+# Claude AI artifacts (optional)
+# ============================================
+# .claude/ directory may contain AI context
+# Uncomment if you want to ignore it
+# .claude/

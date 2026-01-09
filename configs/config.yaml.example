@@ -1,0 +1,77 @@
+# AimHarder Sync Configuration
+# This file can be placed in:
+#   - Current directory (./config.yaml)
+#   - Data directory (~/.aimharder-sync/config.yaml)
+#   - /etc/aimharder-sync/config.yaml
+#
+# Environment variables take precedence over this file.
+# Use environment variables for sensitive data like passwords.
+
+# Aimharder settings
+aimharder:
+  # Your Aimharder login email (or use AIMHARDER_EMAIL env var)
+  # email: your.email@example.com
+  
+  # Your Aimharder password (or use AIMHARDER_PASSWORD env var - recommended)
+  # password: your_password
+  
+  # Your box's subdomain
+  box_name: valhallatrainingcamp
+  
+  # Your box ID
+  box_id: "9818"
+  
+  # Optional: Family ID for accounts with multiple members
+  # family_id: ""
+
+# Strava settings
+strava:
+  # Your Strava API application credentials
+  # Create an app at: https://www.strava.com/settings/api
+  # Use environment variables (recommended): STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET
+  
+  # client_id: ""
+  # client_secret: ""
+  
+  # OAuth callback URL (change if running on a different host/port)
+  redirect_uri: "http://localhost:8080/callback"
+
+# Garmin settings (for future use)
+garmin:
+  # email: ""
+  # password: ""
+
+# Storage settings
+storage:
+  # Directory for storing data files (default: ~/.aimharder-sync)
+  # data_dir: ~/.aimharder-sync
+  
+  # OAuth tokens file
+  # tokens_file: ~/.aimharder-sync/tokens.json
+  
+  # Sync history file
+  # history_file: ~/.aimharder-sync/sync_history.json
+  
+  # Directory for generated TCX files
+  # tcx_dir: ~/.aimharder-sync/tcx
+
+# Sync settings
+sync:
+  # Default number of days to sync when using --days flag
+  default_days: 30
+  
+  # Number of retry attempts for failed uploads
+  retry_attempts: 3
+  
+  # Delay between retries
+  retry_delay: 5s
+  
+  # Default activity type for Strava
+  activity_type: crossfit
+  
+  # Whether to sync workouts that don't have a recorded score
+  include_no_score: true
+  
+  # Default visibility for Strava activities
+  # Options: everyone, followers_only, only_me
+  default_visibility: followers_only
