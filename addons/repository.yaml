@@ -1,0 +1,4 @@
+# Home Assistant Add-on Repository Configuration
+name: AimHarder Sync Add-ons
+url: https://github.com/Matbe34/aimharder-sync
+maintainer: Matbe34

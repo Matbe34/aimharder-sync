@@ -276,6 +276,47 @@ WantedBy=timers.target
 sudo systemctl enable --now aimharder-sync.timer
 ```
 
+### Home Assistant OS 🏠
+
+Deploy as a Home Assistant Add-on for automatic syncing and webhook triggers:
+
+1. **Copy the add-on to your HA** (via Samba or SSH):
+   ```bash
+   # Copy the addons/aimharder-sync folder to /addons/ on your HAOS
+   scp -r addons/aimharder-sync root@homeassistant.local:/addons/
+   ```
+
+2. **Install the add-on**:
+   - Go to **Settings → Add-ons → Add-on Store**
+   - Click ⋮ → **Check for updates**
+   - Find "AimHarder Sync" under "Local add-ons"
+   - Click **Install**
+
+3. **Configure** in the add-on settings with your credentials
+
+4. **Add webhook integration** to `configuration.yaml`:
+   ```yaml
+   rest_command:
+     aimharder_sync:
+       url: "http://localhost:8080/sync"
+       method: POST
+       headers:
+         X-Auth-Token: !secret aimharder_webhook_token
+       timeout: 120
+   ```
+
+5. **Create a script** for the HA Companion App widget:
+   ```yaml
+   script:
+     sync_aimharder:
+       alias: "Sync AimHarder"
+       icon: mdi:weight-lifter
+       sequence:
+         - service: rest_command.aimharder_sync
+   ```
+
+See [addons/README.md](addons/README.md) for full documentation.
+
 ## How It Works
 
 ```
