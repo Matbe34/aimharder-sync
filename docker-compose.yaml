@@ -16,14 +16,11 @@ services:
       - AIMHARDER_BOX_NAME=${AIMHARDER_BOX_NAME:-valhallatrainingcamp}
       - AIMHARDER_BOX_ID=${AIMHARDER_BOX_ID:-9818}
       - AIMHARDER_FAMILY_ID=${AIMHARDER_FAMILY_ID:-}
+      - AIMHARDER_USER_ID=${AIMHARDER_USER_ID:-}
       
       # Strava OAuth credentials (REQUIRED for Strava sync)
       - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}
       - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}
-      
-      # Garmin credentials (for future use)
-      - GARMIN_EMAIL=${GARMIN_EMAIL:-}
-      - GARMIN_PASSWORD=${GARMIN_PASSWORD:-}
       
       # Timezone (Spain for Aimharder)
       - TZ=Europe/Madrid

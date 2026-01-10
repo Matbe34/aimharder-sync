@@ -1,6 +1,6 @@
 # AimHarder Sync 🏋️➡️🏃
 
-Export your CrossFit workouts from [AimHarder](https://aimharder.com) and sync them to **Strava** (and Garmin Connect in the future).
+Export your CrossFit workouts from [AimHarder](https://aimharder.com) and sync them to **Strava**.
 
 [![Go Version](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat&logo=go)](https://golang.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=flat&logo=docker)](https://www.docker.com/)
@@ -15,7 +15,6 @@ Export your CrossFit workouts from [AimHarder](https://aimharder.com) and sync t
 ✅ **Duplicate detection** - won't create duplicate activities  
 ✅ **Docker support** - clean, portable deployment  
 ✅ **CLI interface** - easy to script and schedule  
-✅ **Modular design** - Garmin Connect support coming soon  
 
 ## Prerequisites
 
@@ -110,13 +109,13 @@ docker run --rm -it \
   --env-file .env \
   -v aimharder-data:/data \
   -p 8080:8080 \
-  aimharder-sync auth strava
+  aimharder-sync auth
 
 # Or with docker-compose
-docker-compose run --rm --service-ports aimharder-sync auth strava
+docker-compose run --rm --service-ports aimharder-sync auth
 
 # Or native
-./aimharder-sync auth strava
+./aimharder-sync auth
 ```
 
 This will open a browser URL. Log in to Strava and authorize the application.
@@ -363,15 +362,6 @@ aimharder-sync/
 ├── docker-compose.yaml
 └── README.md
 ```
-
-### Adding Garmin Support
-
-The codebase is designed for easy extension. To add Garmin:
-
-1. Create `internal/garmin/client.go`
-2. Implement OAuth or direct authentication
-3. Add upload method (Garmin accepts TCX)
-4. Register in CLI commands
 
 ## License
 

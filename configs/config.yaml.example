@@ -36,11 +36,6 @@ strava:
   # OAuth callback URL (change if running on a different host/port)
   redirect_uri: "http://localhost:8080/callback"
 
-# Garmin settings (for future use)
-garmin:
-  # email: ""
-  # password: ""
-
 # Storage settings
 storage:
   # Directory for storing data files (default: ~/.aimharder-sync)

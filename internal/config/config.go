@@ -13,7 +13,6 @@ import (
 type Config struct {
 	Aimharder AimharderConfig `mapstructure:"aimharder"`
 	Strava    StravaConfig    `mapstructure:"strava"`
-	Garmin    GarminConfig    `mapstructure:"garmin"`
 	Storage   StorageConfig   `mapstructure:"storage"`
 	Sync      SyncConfig      `mapstructure:"sync"`
 }
@@ -35,12 +34,6 @@ type StravaConfig struct {
 	ClientSecret string `mapstructure:"client_secret"`
 	RedirectURI  string `mapstructure:"redirect_uri"`
 	// Tokens are stored separately for security
-}
-
-// GarminConfig holds Garmin Connect config (for future use)
-type GarminConfig struct {
-	Email    string `mapstructure:"email"`
-	Password string `mapstructure:"password"`
 }
 
 // StorageConfig holds storage paths
@@ -129,8 +122,6 @@ func Load(configPath string) (*Config, error) {
 	v.BindEnv("aimharder.family_id", "AIMHARDER_FAMILY_ID")
 	v.BindEnv("strava.client_id", "STRAVA_CLIENT_ID")
 	v.BindEnv("strava.client_secret", "STRAVA_CLIENT_SECRET")
-	v.BindEnv("garmin.email", "GARMIN_EMAIL")
-	v.BindEnv("garmin.password", "GARMIN_PASSWORD")
 	v.BindEnv("storage.data_dir", "AIMHARDER_STORAGE_DATA_DIR")
 	v.BindEnv("storage.tokens_file", "AIMHARDER_STORAGE_TOKENS_FILE")
 	v.BindEnv("storage.history_file", "AIMHARDER_STORAGE_HISTORY_FILE")

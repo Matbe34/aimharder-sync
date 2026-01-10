@@ -15,7 +15,6 @@ import (
 
 	"github.com/aimharder-sync/internal/aimharder"
 	"github.com/aimharder-sync/internal/config"
-	"github.com/aimharder-sync/internal/garmin"
 	"github.com/aimharder-sync/internal/models"
 	"github.com/aimharder-sync/internal/strava"
 	"github.com/aimharder-sync/internal/tcx"
@@ -31,14 +30,14 @@ var (
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "aimharder-sync",
-		Short: "Sync your Aimharder CrossFit workouts to Strava and Garmin",
+		Short: "Sync your Aimharder CrossFit workouts to Strava",
 		Long: `AimHarder Sync - Export your CrossFit workouts from Aimharder
-and upload them to Strava, Garmin Connect, or export as TCX files.
+and upload them to Strava or export as TCX files.
 
 Before using, you need to:
 1. Set up your Aimharder credentials (AIMHARDER_EMAIL, AIMHARDER_PASSWORD)
 2. Set up Strava API credentials (STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET)
-3. Run 'aimharder-sync auth strava' to authenticate with Strava`,
+3. Run 'aimharder-sync auth' to authenticate with Strava`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			if cmd.Name() == "version" || cmd.Name() == "help" {
 				return nil
@@ -79,13 +78,12 @@ func newSyncCmd() *cobra.Command {
 		startDate string
 		endDate   string
 		force     bool
-		platforms []string
 	)
 
 	cmd := &cobra.Command{
 		Use:   "sync",
-		Short: "Sync workouts from Aimharder to fitness platforms",
-		Long: `Fetch workouts from Aimharder and upload them to Strava and/or Garmin.
+		Short: "Sync workouts from Aimharder to Strava",
+		Long: `Fetch workouts from Aimharder and upload them to Strava.
 By default, syncs the last 30 days of workouts.
 
 Examples:
@@ -101,7 +99,7 @@ Examples:
   # Force re-sync already synced workouts
   aimharder-sync sync --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runSync(days, startDate, endDate, force, platforms)
+			return runSync(days, startDate, endDate, force)
 		},
 	}
 
@@ -109,23 +107,21 @@ Examples:
 	cmd.Flags().StringVar(&startDate, "start", "", "start date (YYYY-MM-DD)")
 	cmd.Flags().StringVar(&endDate, "end", "", "end date (YYYY-MM-DD)")
 	cmd.Flags().BoolVar(&force, "force", false, "force re-sync of already synced workouts")
-	cmd.Flags().StringSliceVar(&platforms, "platform", []string{"strava"}, "platforms to sync to (strava, garmin)")
 
 	return cmd
 }
 
 func newAuthCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "auth [platform]",
-		Short: "Authenticate with fitness platforms",
-		Long: `Authenticate with Strava or Garmin Connect.
+		Use:   "auth",
+		Short: "Authenticate with Strava",
+		Long: `Authenticate with Strava (opens browser).
 
 Examples:
-  # Authenticate with Strava (opens browser)
-  aimharder-sync auth strava`,
-		Args: cobra.ExactArgs(1),
+  # Authenticate with Strava
+  aimharder-sync auth`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runAuth(args[0])
+			return runAuth()
 		},
 	}
 
@@ -222,7 +218,7 @@ func newVersionCmd() *cobra.Command {
 
 // Command implementations
 
-func runSync(days int, startDate, endDate string, force bool, platforms []string) error {
+func runSync(days int, startDate, endDate string, force bool) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -233,7 +229,6 @@ func runSync(days int, startDate, endDate string, force bool, platforms []string
 		<-sigCh
 		fmt.Println("\n⚠️  Cancelling... (press Ctrl+C again to force)")
 		cancel()
-		// Second signal forces exit
 		<-sigCh
 		fmt.Println("\n❌ Forced exit")
 		os.Exit(1)
@@ -285,7 +280,7 @@ func runSync(days int, startDate, endDate string, force bool, platforms []string
 
 	var toSync []models.Workout
 	for _, w := range workouts {
-		if force || !isWorkoutSynced(history, w.ID, platforms) {
+		if force || !isWorkoutSynced(history, w.ID) {
 			toSync = append(toSync, w)
 		}
 	}
@@ -297,7 +292,7 @@ func runSync(days int, startDate, endDate string, force bool, platforms []string
 
 	fmt.Printf("🔄 %d workouts to sync\n", len(toSync))
 
-	// Generate TCX files (needed for both dry-run preview and actual sync)
+	// Generate TCX files
 	fmt.Println("📝 Generating TCX files...")
 	tcxGen := tcx.NewGenerator(cfg.Storage.TCXDir)
 	tcxFiles, err := tcxGen.GenerateAll(toSync)
@@ -310,12 +305,9 @@ func runSync(days int, startDate, endDate string, force bool, platforms []string
 		fmt.Println("📋 DRY RUN - Strava Activities that would be created:")
 		fmt.Println(strings.Repeat("━", 70))
 
-		// Create Strava client to get proper activity mapping
 		var stravaClient *strava.Client
-		if contains(platforms, "strava") {
-			if err := cfg.ValidateStrava(); err == nil {
-				stravaClient, _ = strava.NewClient(cfg)
-			}
+		if err := cfg.ValidateStrava(); err == nil {
+			stravaClient, _ = strava.NewClient(cfg)
 		}
 
 		for i, w := range toSync {
@@ -326,10 +318,9 @@ func runSync(days int, startDate, endDate string, force bool, platforms []string
 
 			fmt.Printf("\n┌─ Activity %d of %d ─────────────────────────────────────────────────\n", i+1, len(toSync))
 			fmt.Printf("│\n")
-			fmt.Printf("│ 🔶 STRAVA ACTIVITY PREVIEW\n")
+			fmt.Printf("│ 🏃 STRAVA ACTIVITY PREVIEW\n")
 			fmt.Printf("│ %s\n", strings.Repeat("─", 50))
 
-			// Show Strava-specific fields
 			activityName := w.Name
 			if activityName == "" {
 				activityName = fmt.Sprintf("CrossFit WOD - %s", w.Date.Format("2006-01-02"))
@@ -344,7 +335,6 @@ func runSync(days int, startDate, endDate string, force bool, platforms []string
 			fmt.Printf("│\n")
 			fmt.Printf("│ 📛 name:           %s\n", activityName)
 			fmt.Printf("│ 🏃 type:           %s\n", activityType)
-			fmt.Printf("│ 🏃 sport_type:     %s\n", activityType)
 			fmt.Printf("│ 📅 start_date:     %s\n", w.Date.Format("2006-01-02T15:04:05Z"))
 			fmt.Printf("│ 🆔 external_id:    %s\n", w.ID)
 			fmt.Printf("│ 📄 data_type:      tcx\n")
@@ -352,7 +342,6 @@ func runSync(days int, startDate, endDate string, force bool, platforms []string
 				fmt.Printf("│ 📁 tcx_file:       %s\n", tcxFile)
 			}
 
-			// Duration/elapsed time
 			elapsed := ""
 			if w.Duration > 0 {
 				elapsed = formatDurationForDisplay(w.Duration)
@@ -382,7 +371,6 @@ func runSync(days int, startDate, endDate string, force bool, platforms []string
 			fmt.Printf("│ 🏠 Box:            %s\n", w.BoxName)
 			fmt.Printf("│ 🏋️  Workout Type:   %s\n", w.Type)
 
-			// Show sections summary
 			if len(w.Sections) > 0 {
 				fmt.Printf("│\n│ 📋 Sections:\n")
 				for _, s := range w.Sections {
@@ -402,7 +390,6 @@ func runSync(days int, startDate, endDate string, force bool, platforms []string
 				}
 			}
 
-			// Show result
 			if w.Result != nil {
 				fmt.Printf("│\n│ 🎯 Result:\n")
 				if w.Result.Time != nil {
@@ -432,35 +419,12 @@ func runSync(days int, startDate, endDate string, force bool, platforms []string
 
 		fmt.Printf("\n📊 Summary: %d activities would be uploaded to Strava\n", len(toSync))
 		fmt.Println("📁 TCX files generated in:", cfg.Storage.TCXDir)
-
-		// Also show Garmin preview if platform includes garmin
-		if contains(platforms, "garmin") {
-			showGarminDryRunPreview(cfg, toSync, tcxFiles)
-		}
-
 		fmt.Println("\n💡 Run without --dry-run to actually sync these workouts.")
 		return nil
 	}
 
-	for _, platform := range platforms {
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("cancelled")
-		default:
-		}
-
-		switch platform {
-		case "strava":
-			if err := syncToStrava(ctx, cfg, toSync, tcxFiles, history); err != nil {
-				fmt.Printf("⚠️  Strava sync error: %v\n", err)
-			}
-		case "garmin":
-			if err := syncToGarmin(ctx, cfg, toSync, tcxFiles, history); err != nil {
-				fmt.Printf("⚠️  Garmin sync error: %v\n", err)
-			}
-		default:
-			fmt.Printf("⚠️  Unknown platform: %s\n", platform)
-		}
+	if err := syncToStrava(ctx, cfg, toSync, tcxFiles, history); err != nil {
+		fmt.Printf("⚠️  Strava sync error: %v\n", err)
 	}
 
 	if err := saveSyncHistory(cfg.Storage.HistoryFile, history); err != nil {
@@ -482,10 +446,37 @@ func syncToStrava(ctx context.Context, cfg *config.Config, workouts []models.Wor
 	}
 
 	if !stravaClient.IsAuthenticated() {
-		return fmt.Errorf("not authenticated with Strava - run 'aimharder-sync auth strava' first")
+		return fmt.Errorf("not authenticated with Strava - run 'aimharder-sync auth' first")
+	}
+
+	// Find the date range of workouts we're syncing
+	var minDate, maxDate time.Time
+	for _, w := range workouts {
+		if minDate.IsZero() || w.Date.Before(minDate) {
+			minDate = w.Date
+		}
+		if maxDate.IsZero() || w.Date.After(maxDate) {
+			maxDate = w.Date
+		}
+	}
+
+	// Fetch existing Strava activities in this date range (with some buffer)
+	fmt.Println("🔍 Checking for existing activities in Strava...")
+	startRange := minDate.AddDate(0, 0, -1) // 1 day before
+	endRange := maxDate.AddDate(0, 0, 1)    // 1 day after
+	existingActivities, err := stravaClient.GetActivitiesInRange(ctx, startRange, endRange)
+	if err != nil {
+		fmt.Printf("⚠️  Warning: Could not fetch existing activities: %v\n", err)
+		fmt.Println("   Proceeding anyway (Strava will reject duplicates)...")
+		existingActivities = nil
+	} else {
+		fmt.Printf("   Found %d existing activities in date range\n", len(existingActivities))
 	}
 
 	fmt.Println("📤 Uploading to Strava...")
+
+	uploadedCount := 0
+	skippedCount := 0
 
 	for i, workout := range workouts {
 		if i >= len(tcxFiles) {
@@ -498,210 +489,72 @@ func syncToStrava(ctx context.Context, cfg *config.Config, workouts []models.Wor
 		default:
 		}
 
+		// Check if activity already exists in Strava
+		if existingActivities != nil {
+			if existing := stravaClient.ActivityExistsForWorkout(existingActivities, &workout); existing != nil {
+				fmt.Printf("  ⏭️  Skipping: %s - %s (already exists as activity %d)\n",
+					workout.Date.Format("2006-01-02"), workout.Name, existing.ID)
+				recordSync(history, workout.ID, fmt.Sprintf("%d", existing.ID), true, "already_exists")
+				skippedCount++
+				continue
+			}
+		}
+
 		tcxFile := tcxFiles[i]
 		fmt.Printf("  📤 Uploading: %s - %s...", workout.Date.Format("2006-01-02"), workout.Name)
 
 		uploadResp, err := stravaClient.UploadActivity(ctx, tcxFile, &workout)
 		if err != nil {
 			fmt.Printf(" ❌ Error: %v\n", err)
-			recordSync(history, workout.ID, "strava", "", false, err.Error())
+			recordSync(history, workout.ID, "", false, err.Error())
 			continue
 		}
 
 		status, err := stravaClient.WaitForUpload(ctx, uploadResp.ID, 2*time.Minute)
 		if err != nil {
 			fmt.Printf(" ❌ Error: %v\n", err)
-			recordSync(history, workout.ID, "strava", "", false, err.Error())
+			recordSync(history, workout.ID, "", false, err.Error())
 			continue
 		}
 
 		if status.Error != "" {
 			if status.Error == "duplicate" || strings.Contains(status.Error, "duplicate") {
 				fmt.Printf(" ⏭️  Already exists\n")
-				recordSync(history, workout.ID, "strava", "", true, "duplicate")
+				recordSync(history, workout.ID, "", true, "duplicate")
+				skippedCount++
 			} else {
 				fmt.Printf(" ❌ Error: %s\n", status.Error)
-				recordSync(history, workout.ID, "strava", "", false, status.Error)
+				recordSync(history, workout.ID, "", false, status.Error)
 			}
 			continue
 		}
 
 		fmt.Printf(" ✅ Activity ID: %d\n", status.ActivityID)
-		recordSync(history, workout.ID, "strava", fmt.Sprintf("%d", status.ActivityID), true, "")
+		recordSync(history, workout.ID, fmt.Sprintf("%d", status.ActivityID), true, "")
+		uploadedCount++
 
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	return nil
-}
-
-func syncToGarmin(ctx context.Context, cfg *config.Config, workouts []models.Workout, tcxFiles []string, history map[string][]models.SyncStatus) error {
-	if cfg.Garmin.Email == "" || cfg.Garmin.Password == "" {
-		return fmt.Errorf("garmin credentials not configured (set GARMIN_EMAIL and GARMIN_PASSWORD)")
-	}
-
-	garminClient, err := garmin.NewClient(cfg)
-	if err != nil {
-		return fmt.Errorf("failed to create Garmin client: %w", err)
-	}
-
-	// Check if we need to login
-	if !garminClient.IsAuthenticated() {
-		if err := garminClient.Login(ctx); err != nil {
-			return fmt.Errorf("failed to login to Garmin: %w", err)
-		}
-	}
-
-	if dryRun {
-		// Dry run - show preview
-		fmt.Println("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		fmt.Println("📋 DRY RUN - Garmin Connect Activities that would be uploaded:")
-		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-
-		for i, workout := range workouts {
-			tcxFile := ""
-			if i < len(tcxFiles) {
-				tcxFile = tcxFiles[i]
-			}
-
-			preview := garminClient.PreviewActivity(&workout, tcxFile)
-
-			fmt.Printf("\n┌─ Activity %d of %d ─────────────────────────────────────────────────\n", i+1, len(workouts))
-			fmt.Println("│")
-			fmt.Println("│ 🟠 GARMIN CONNECT ACTIVITY PREVIEW")
-			fmt.Println("│ ──────────────────────────────────────────────────")
-			fmt.Println("│")
-			fmt.Printf("│ 📛 name:           %s\n", preview.Name)
-			fmt.Printf("│ 📅 start_date:     %s\n", preview.StartTime.Format("2006-01-02T15:04:05Z"))
-			fmt.Printf("│ 🆔 workout_id:     %s\n", preview.WorkoutID)
-			fmt.Printf("│ 📄 data_type:      tcx\n")
-			fmt.Printf("│ 📁 tcx_file:       %s\n", preview.TCXFile)
-			if preview.Duration > 0 {
-				fmt.Printf("│ ⏱️  duration:       %s\n", formatDurationForDisplay(preview.Duration))
-			}
-			fmt.Println("│")
-			fmt.Println("│ 📝 description:")
-			fmt.Println("│ ──────────────────────────────────────────────────")
-			for _, line := range strings.Split(preview.Description, "\n") {
-				fmt.Printf("│    %s\n", line)
-			}
-			fmt.Println("│")
-			fmt.Println("└─────────────────────────────────────────────────────────────────────")
-		}
-
-		fmt.Printf("\n📊 Summary: %d activities would be uploaded to Garmin Connect\n", len(workouts))
-		fmt.Println("\n💡 Run without --dry-run to actually sync these workouts.")
-		return nil
-	}
-
-	// Actual upload
-	fmt.Println("📤 Uploading to Garmin Connect...")
-
-	for i, workout := range workouts {
-		if i >= len(tcxFiles) {
-			break
-		}
-
-		tcxFile := tcxFiles[i]
-
-		fmt.Printf("  📤 Uploading: %s - %s...", workout.Date.Format("2006-01-02"), workout.Name)
-
-		uploadResp, err := garminClient.UploadActivity(ctx, tcxFile, &workout)
-		if err != nil {
-			if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "already exists") {
-				fmt.Printf(" ⏭️  Already exists\n")
-				recordSync(history, workout.ID, "garmin", "", true, "duplicate")
-			} else {
-				fmt.Printf(" ❌ Error: %v\n", err)
-				recordSync(history, workout.ID, "garmin", "", false, err.Error())
-			}
-			continue
-		}
-
-		if len(uploadResp.DetailedImportResult.Successes) > 0 {
-			activityID := uploadResp.DetailedImportResult.Successes[0].InternalID
-			fmt.Printf(" ✅ Activity ID: %d\n", activityID)
-			recordSync(history, workout.ID, "garmin", fmt.Sprintf("%d", activityID), true, "")
-		} else {
-			fmt.Printf(" ✅ Uploaded (ID: %d)\n", uploadResp.DetailedImportResult.UploadID)
-			recordSync(history, workout.ID, "garmin", fmt.Sprintf("%d", uploadResp.DetailedImportResult.UploadID), true, "")
-		}
-
-		time.Sleep(1 * time.Second) // Rate limiting for Garmin
-	}
+	fmt.Printf("\n📊 Summary: %d uploaded, %d skipped (already existed)\n", uploadedCount, skippedCount)
 
 	return nil
 }
 
-// showGarminDryRunPreview displays a preview of Garmin activities for dry-run mode
-func showGarminDryRunPreview(cfg *config.Config, workouts []models.Workout, tcxFiles []string) {
-	fmt.Println("\n" + strings.Repeat("━", 70))
-	fmt.Println("📋 DRY RUN - Garmin Connect Activities that would be uploaded:")
-	fmt.Println(strings.Repeat("━", 70))
-
-	for i, w := range workouts {
-		tcxFile := ""
-		if i < len(tcxFiles) {
-			tcxFile = tcxFiles[i]
-		}
-
-		fmt.Printf("\n┌─ Activity %d of %d ─────────────────────────────────────────────────\n", i+1, len(workouts))
-		fmt.Printf("│\n")
-		fmt.Printf("│ 🟠 GARMIN CONNECT ACTIVITY PREVIEW\n")
-		fmt.Printf("│ %s\n", strings.Repeat("─", 50))
-		fmt.Printf("│\n")
-		fmt.Printf("│ 📛 name:           %s\n", w.Name)
-		fmt.Printf("│ 📅 start_date:     %s\n", w.Date.Format("2006-01-02T15:04:05Z"))
-		fmt.Printf("│ 🆔 workout_id:     %s\n", w.ID)
-		fmt.Printf("│ 📄 data_type:      tcx\n")
-		fmt.Printf("│ 📁 tcx_file:       %s\n", tcxFile)
-		if w.Duration > 0 {
-			fmt.Printf("│ ⏱️  duration:       %s\n", formatDurationForDisplay(w.Duration))
-		}
-		fmt.Printf("│\n")
-		fmt.Printf("│ 📝 description:\n")
-		fmt.Printf("│ %s\n", strings.Repeat("─", 50))
-		for _, line := range strings.Split(w.FormatDescription(), "\n") {
-			fmt.Printf("│    %s\n", line)
-		}
-		fmt.Printf("└%s\n", strings.Repeat("─", 69))
-	}
-
-	fmt.Printf("\n📊 Summary: %d activities would be uploaded to Garmin Connect\n", len(workouts))
-}
-
-func runAuth(platform string) error {
+func runAuth() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	switch platform {
-	case "strava":
-		if err := cfg.ValidateStrava(); err != nil {
-			return err
-		}
-
-		stravaClient, err := strava.NewClient(cfg)
-		if err != nil {
-			return fmt.Errorf("failed to create Strava client: %w", err)
-		}
-
-		return stravaClient.StartOAuthFlow(ctx)
-
-	case "garmin":
-		if cfg.Garmin.Email == "" || cfg.Garmin.Password == "" {
-			return fmt.Errorf("garmin email and password are required (set GARMIN_EMAIL and GARMIN_PASSWORD)")
-		}
-
-		garminClient, err := garmin.NewClient(cfg)
-		if err != nil {
-			return fmt.Errorf("failed to create Garmin client: %w", err)
-		}
-
-		return garminClient.Login(ctx)
-
-	default:
-		return fmt.Errorf("unknown platform: %s (supported: strava, garmin)", platform)
+	if err := cfg.ValidateStrava(); err != nil {
+		return err
 	}
+
+	stravaClient, err := strava.NewClient(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create Strava client: %w", err)
+	}
+
+	return stravaClient.StartOAuthFlow(ctx)
 }
 
 func runFetch(days int, startDate, endDate, output string) error {
@@ -761,7 +614,6 @@ func runFetch(days int, startDate, endDate, output string) error {
 	} else {
 		for _, w := range workouts {
 			fmt.Println(strings.Repeat("━", 70))
-			// Show date with time if available
 			if w.Date.Hour() > 0 || w.Date.Minute() > 0 {
 				fmt.Printf("📅 %s @ %s - %s\n", w.Date.Format("2006-01-02 (Monday)"), w.Date.Format("15:04"), w.Name)
 			} else {
@@ -769,7 +621,6 @@ func runFetch(days int, startDate, endDate, output string) error {
 			}
 			fmt.Printf("   🏠 %s | 🏋️ %s\n", w.BoxName, w.Type)
 
-			// Show sections with full details
 			if len(w.Sections) > 0 {
 				fmt.Println("\n   📋 Workout Structure:")
 				for i, s := range w.Sections {
@@ -779,16 +630,13 @@ func runFetch(days int, startDate, endDate, output string) error {
 					}
 					fmt.Println(line)
 
-					// Section result - show rounds/reps completed
 					resultLine := "          → "
 					hasResult := false
 
-					// For AMRAP: show "5R + 10 reps" format
 					if s.RoundsCompleted > 0 && s.RepsAchieved > 0 {
 						resultLine += fmt.Sprintf("%dR + %d reps", s.RoundsCompleted, s.RepsAchieved)
 						hasResult = true
 					} else if s.RoundsCompleted > 0 {
-						// For EMOM/other: show "4/4 sets" or just rounds
 						if s.Type == "EMOM" || strings.Contains(strings.ToUpper(s.Name), "EMOM") {
 							resultLine += fmt.Sprintf("%d/%d sets", s.RoundsCompleted, s.RoundsCompleted)
 						} else {
@@ -819,16 +667,13 @@ func runFetch(days int, startDate, endDate, output string) error {
 						fmt.Println(resultLine)
 					}
 
-					// Section notes
 					if s.Notes != "" {
-						// Clean up HTML entities
 						notes := strings.ReplaceAll(s.Notes, "&quot;", "\"")
 						notes = strings.ReplaceAll(notes, "&#39;", "'")
 						notes = strings.ReplaceAll(notes, "\u2019", "'")
 						fmt.Printf("          📝 %s\n", notes)
 					}
 
-					// Show exercises for this section
 					for _, ex := range w.Exercises {
 						if ex.SectionIndex == i {
 							exLine := "            • " + ex.Name
@@ -863,7 +708,6 @@ func runFetch(days int, startDate, endDate, output string) error {
 				}
 			}
 
-			// Show exercises without section or if only one section (group all together)
 			unassigned := false
 			for _, ex := range w.Exercises {
 				if len(w.Sections) <= 1 || ex.SectionIndex >= len(w.Sections) {
@@ -908,7 +752,6 @@ func runFetch(days int, startDate, endDate, output string) error {
 				}
 			}
 
-			// Show result
 			if w.Result != nil {
 				fmt.Println("\n   🎯 Result:")
 				if w.Result.Time != nil {
@@ -1036,14 +879,11 @@ func runStatus() error {
 		if err == nil && stravaClient.IsAuthenticated() {
 			fmt.Println("   ✅ Authenticated")
 		} else {
-			fmt.Println("   ❌ Not authenticated (run 'auth strava')")
+			fmt.Println("   ❌ Not authenticated (run 'auth')")
 		}
 	} else {
 		fmt.Println("   ❌ Not configured (set STRAVA_CLIENT_ID, STRAVA_CLIENT_SECRET)")
 	}
-
-	fmt.Println("\n⌚ Garmin:")
-	fmt.Println("   ⚠️  Not yet implemented")
 
 	fmt.Println("\n💾 Storage:")
 	fmt.Printf("   Data dir: %s\n", cfg.Storage.DataDir)
@@ -1114,32 +954,25 @@ func saveSyncHistory(filepath string, history map[string][]models.SyncStatus) er
 	return os.WriteFile(filepath, data, 0644)
 }
 
-func isWorkoutSynced(history map[string][]models.SyncStatus, workoutID string, platforms []string) bool {
+func isWorkoutSynced(history map[string][]models.SyncStatus, workoutID string) bool {
 	statuses, ok := history[workoutID]
 	if !ok {
 		return false
 	}
 
-	for _, platform := range platforms {
-		synced := false
-		for _, s := range statuses {
-			if s.Platform == platform && s.Success {
-				synced = true
-				break
-			}
-		}
-		if !synced {
-			return false
+	for _, s := range statuses {
+		if s.Success {
+			return true
 		}
 	}
 
-	return true
+	return false
 }
 
-func recordSync(history map[string][]models.SyncStatus, workoutID, platform, externalID string, success bool, errorMsg string) {
+func recordSync(history map[string][]models.SyncStatus, workoutID, externalID string, success bool, errorMsg string) {
 	status := models.SyncStatus{
 		WorkoutID:    workoutID,
-		Platform:     platform,
+		Platform:     "strava",
 		ExternalID:   externalID,
 		SyncedAt:     time.Now(),
 		Success:      success,
@@ -1165,38 +998,4 @@ func formatDurationForDisplay(d time.Duration) string {
 		return fmt.Sprintf("%dm %ds", m, s)
 	}
 	return fmt.Sprintf("%ds", s)
-}
-
-func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
-}
-
-func mapWorkoutTypeForDisplay(workoutType models.WorkoutType) string {
-	switch workoutType {
-	case models.WorkoutTypeStrength:
-		return "Weight Training"
-	case models.WorkoutTypeAMRAP:
-		return "CrossFit (AMRAP)"
-	case models.WorkoutTypeForTime:
-		return "CrossFit (For Time)"
-	case models.WorkoutTypeEMOM:
-		return "CrossFit (EMOM)"
-	case models.WorkoutTypeTabata:
-		return "CrossFit (Tabata)"
-	case models.WorkoutTypeHero:
-		return "CrossFit (Hero WOD)"
-	case models.WorkoutTypeGirl:
-		return "CrossFit (Benchmark)"
-	case models.WorkoutTypeOpen:
-		return "CrossFit (Open)"
-	case models.WorkoutTypeSkill:
-		return "CrossFit (Skill)"
-	default:
-		return "CrossFit"
-	}
 }

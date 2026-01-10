@@ -370,6 +370,68 @@ func (c *Client) GetAthleteActivities(ctx context.Context, page, perPage int) ([
 	return activities, nil
 }
 
+// GetActivitiesInRange gets all activities within a date range
+func (c *Client) GetActivitiesInRange(ctx context.Context, start, end time.Time) ([]Activity, error) {
+	if err := c.EnsureValidToken(ctx); err != nil {
+		return nil, err
+	}
+
+	// Strava uses Unix timestamps for before/after params
+	url := fmt.Sprintf("%s/athlete/activities?after=%d&before=%d&per_page=200",
+		apiBaseURL, start.Unix(), end.Unix())
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", "Bearer "+c.tokens.AccessToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to get activities: %d - %s", resp.StatusCode, string(body))
+	}
+
+	var activities []Activity
+	if err := json.Unmarshal(body, &activities); err != nil {
+		return nil, err
+	}
+
+	return activities, nil
+}
+
+// ActivityExistsForWorkout checks if an activity already exists in Strava for this workout
+// It checks by external_id or by matching date (same day)
+func (c *Client) ActivityExistsForWorkout(existingActivities []Activity, workout *models.Workout) *Activity {
+	for i := range existingActivities {
+		act := &existingActivities[i]
+
+		// Check by external_id (our workout ID)
+		if act.ExternalID == workout.ID {
+			return act
+		}
+
+		// Check by matching date (same day) and similar time
+		// Strava uses UTC, but we'll compare just the date part
+		workoutDate := workout.Date.Format("2006-01-02")
+		activityDate := act.StartDateLocal.Format("2006-01-02")
+
+		if workoutDate == activityDate {
+			// Same day - likely the same workout
+			return act
+		}
+	}
+
+	return nil
+}
+
 // mapWorkoutType maps internal workout type to Strava activity type
 func (c *Client) mapWorkoutType(workoutType models.WorkoutType) string {
 	// Strava activity types: https://developers.strava.com/docs/reference/#api-models-ActivityType
