@@ -1,0 +1,66 @@
+# Home Assistant Add-on Configuration
+name: "AimHarder Sync"
+description: "Sync AimHarder workouts to Strava"
+version: "1.0.0"
+slug: "aimharder-sync"
+init: false
+arch:
+  - amd64
+  - aarch64
+  - armv7
+homeassistant_api: false
+hassio_api: false
+host_network: false
+ingress: false
+panel_icon: mdi:weight-lifter
+
+# Expose webhook port
+ports:
+  8080/tcp: 8080
+ports_description:
+  8080/tcp: "Webhook API"
+
+# Persistent data
+map:
+  - share:rw
+
+# Add-on options (user configurable)
+options:
+  strava_client_id: ""
+  strava_client_secret: ""
+  strava_refresh_token: ""
+  aimharder_email: ""
+  aimharder_password: ""
+  aimharder_box_id: ""
+  aimharder_user_id: ""
+  webhook_token: ""
+  webhook_port: 8080
+  sync_days: 1
+  check_interval: 60
+  quiet_hours_start: 0
+  quiet_hours_end: 6
+  enable_scheduler: true
+  dry_run: false
+
+schema:
+  strava_client_id: str
+  strava_client_secret: password
+  strava_refresh_token: password
+  aimharder_email: email
+  aimharder_password: password
+  aimharder_box_id: str
+  aimharder_user_id: str
+  webhook_token: password
+  webhook_port: port
+  sync_days: int(1,30)
+  check_interval: int(30,3600)
+  quiet_hours_start: int(0,23)
+  quiet_hours_end: int(0,23)
+  enable_scheduler: bool
+  dry_run: bool
+
+# Build arguments for multi-arch
+build_from:
+  amd64: "golang:alpine"
+  aarch64: "golang:alpine"
+  armv7: "golang:alpine"

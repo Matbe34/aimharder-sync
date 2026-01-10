@@ -46,7 +46,38 @@ rest_command:
     timeout: 120
 ```
 
-5. Create a script or button to trigger syncs!
+5. Add to `secrets.yaml`:
+
+```yaml
+aimharder_webhook_token: "your-webhook-token-here"
+```
+
+6. Create a script for phone widgets:
+
+```yaml
+script:
+  sync_aimharder:
+    alias: "Sync AimHarder"
+    icon: mdi:weight-lifter
+    sequence:
+      - service: rest_command.aimharder_sync
+```
+
+7. Add the script to a Home Assistant Companion App widget!
+
+## Deployment
+
+To deploy to Home Assistant OS:
+
+```bash
+# Prepare the add-on (copies source files)
+bash addons/aimharder-sync/prepare.sh
+
+# Copy to Home Assistant
+scp -r addons/aimharder-sync user@homeassistant.local:/addons/
+```
+
+Then in HA: Settings → Add-ons → Add-on Store → ⋮ → Check for updates
 
 [amd64-shield]: https://img.shields.io/badge/amd64-yes-green.svg
 [aarch64-shield]: https://img.shields.io/badge/aarch64-yes-green.svg

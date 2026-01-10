@@ -14,6 +14,8 @@ Export your CrossFit workouts from [AimHarder](https://aimharder.com) and sync t
 ✅ **Incremental sync** - only syncs new workouts  
 ✅ **Duplicate detection** - won't create duplicate activities  
 ✅ **Docker support** - clean, portable deployment  
+✅ **Home Assistant Add-on** - easy deployment on HAOS  
+✅ **Webhook API** - trigger syncs from phone widgets  
 ✅ **CLI interface** - easy to script and schedule  
 
 ## Prerequisites
@@ -23,6 +25,7 @@ You need your AimHarder login credentials and your box information:
 - **Email** and **Password** for your AimHarder account
 - **Box Name**: The subdomain of your box (e.g., `valhallatrainingcamp` from `https://valhallatrainingcamp.aimharder.com`)
 - **Box ID**: Found by inspecting network requests in your browser (see [Finding Your Box ID](#finding-your-box-id))
+- **User ID**: Found in API requests as `userID` parameter
 
 ### 2. Strava API Application
 Create a Strava API application to enable syncing:
@@ -178,10 +181,13 @@ Configuration can be provided via:
 | `AIMHARDER_EMAIL` | ✅ | Your AimHarder login email |
 | `AIMHARDER_PASSWORD` | ✅ | Your AimHarder password |
 | `AIMHARDER_BOX_NAME` | ✅ | Box subdomain (e.g., `valhallatrainingcamp`) |
-| `AIMHARDER_BOX_ID` | ✅ | Box ID (e.g., `9818`) |
+| `AIMHARDER_BOX_ID` | ✅ | Box ID (e.g., `1234`) |
+| `AIMHARDER_USER_ID` | ✅ | Your User ID (e.g., `123456`) |
 | `AIMHARDER_FAMILY_ID` | ❌ | Family ID (if multiple members) |
 | `STRAVA_CLIENT_ID` | ✅* | Strava API Client ID |
 | `STRAVA_CLIENT_SECRET` | ✅* | Strava API Client Secret |
+| `WEBHOOK_PORT` | ❌ | Webhook server port (default: 8080) |
+| `WEBHOOK_TOKEN` | ❌ | Auth token for webhook requests |
 
 *Required for Strava sync
 
@@ -203,20 +209,25 @@ sync:
   include_no_score: true
 ```
 
-## Finding Your Box ID
+## Finding Your Box ID and User ID
 
 1. Open your browser's Developer Tools (F12)
 2. Go to the Network tab
 3. Navigate to your box's schedule page on AimHarder
-4. Book or view a class
-5. Look for requests to `/api/bookings` or similar
-6. The `box` parameter in the URL is your Box ID
+4. Book or view a class, or go to your profile/activity page
+5. Look for API requests containing `box=` and `userID=`
 
-Example URL:
+Example URLs:
 ```
-https://valhallatrainingcamp.aimharder.com/api/bookings?day=20260108&familyId=&box=9818
+# Box ID in booking requests:
+https://test.aimharder.com/api/bookings?day=20260108&familyId=&box=1234
                                                                                ^^^^
-                                                                           Box ID: 9818
+                                                                           Box ID: 1234
+
+# User ID in activity requests:
+https://aimharder.com/api/activity?timeLineFormat=0&timeLineContent=2&userID=123456
+                                                                      ^^^^^^
+                                                                   User ID: 123456
 ```
 
 ## Scheduled Syncing
