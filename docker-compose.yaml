@@ -1,12 +1,13 @@
 version: '3.8'
 
 services:
+  # Interactive service for manual commands and initial auth
   aimharder-sync:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: aimharder-sync
-    restart: unless-stopped
+    restart: "no"
     environment:
       # Aimharder credentials (REQUIRED)
       - AIMHARDER_EMAIL=${AIMHARDER_EMAIL}
@@ -33,41 +34,75 @@ services:
     # Override default command if needed
     # command: ["sync", "--days", "7"]
 
-  # Scheduled sync job (runs daily at 6 AM)
-  aimharder-sync-cron:
+  # Scheduler service - checks every minute for new workouts
+  aimharder-scheduler:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: aimharder-sync-cron
+    container_name: aimharder-scheduler
     restart: unless-stopped
     environment:
+      # Aimharder credentials (REQUIRED)
       - AIMHARDER_EMAIL=${AIMHARDER_EMAIL}
       - AIMHARDER_PASSWORD=${AIMHARDER_PASSWORD}
       - AIMHARDER_BOX_NAME=${AIMHARDER_BOX_NAME:-valhallatrainingcamp}
       - AIMHARDER_BOX_ID=${AIMHARDER_BOX_ID:-9818}
       - AIMHARDER_FAMILY_ID=${AIMHARDER_FAMILY_ID:-}
+      - AIMHARDER_USER_ID=${AIMHARDER_USER_ID:-}
+      
+      # Strava OAuth credentials (REQUIRED for Strava sync)
       - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}
       - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}
+      
+      # Timezone
       - TZ=Europe/Madrid
+      
+      # Scheduler configuration
+      - CHECK_INTERVAL=${CHECK_INTERVAL:-60}      # Check every 60 seconds
+      - SYNC_DAYS=${SYNC_DAYS:-1}                 # Look back 1 day
+      - QUIET_HOURS_START=${QUIET_HOURS_START:-0} # Quiet hours start (0=disabled)
+      - QUIET_HOURS_END=${QUIET_HOURS_END:-0}     # Quiet hours end (0=disabled)
     volumes:
       - aimharder-data:/data
     entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        echo "Starting scheduled sync service..."
-        while true; do
-          # Run at 6:00 AM every day
-          CURRENT_HOUR=$$(date +%H)
-          CURRENT_MIN=$$(date +%M)
-          if [ "$$CURRENT_HOUR" = "06" ] && [ "$$CURRENT_MIN" = "00" ]; then
-            echo "$$(date): Running scheduled sync..."
-            aimharder-sync sync --days 7
-            sleep 60  # Avoid running multiple times in the same minute
-          fi
-          sleep 30  # Check every 30 seconds
-        done
+    command: ["/app/scheduler.sh"]
     profiles:
-      - scheduled  # Only starts with: docker-compose --profile scheduled up
+      - scheduler  # Only starts with: docker-compose --profile scheduler up
+
+  # Webhook server - trigger syncs from phone widgets or automation
+  aimharder-webhook:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aimharder-webhook
+    restart: unless-stopped
+    environment:
+      # Aimharder credentials (REQUIRED)
+      - AIMHARDER_EMAIL=${AIMHARDER_EMAIL}
+      - AIMHARDER_PASSWORD=${AIMHARDER_PASSWORD}
+      - AIMHARDER_BOX_NAME=${AIMHARDER_BOX_NAME:-valhallatrainingcamp}
+      - AIMHARDER_BOX_ID=${AIMHARDER_BOX_ID:-9818}
+      - AIMHARDER_FAMILY_ID=${AIMHARDER_FAMILY_ID:-}
+      - AIMHARDER_USER_ID=${AIMHARDER_USER_ID:-}
+      
+      # Strava OAuth credentials (REQUIRED for Strava sync)
+      - STRAVA_CLIENT_ID=${STRAVA_CLIENT_ID}
+      - STRAVA_CLIENT_SECRET=${STRAVA_CLIENT_SECRET}
+      
+      # Timezone
+      - TZ=Europe/Madrid
+      
+      # Webhook configuration
+      - WEBHOOK_PORT=${WEBHOOK_PORT:-8080}
+      - WEBHOOK_TOKEN=${WEBHOOK_TOKEN:-}  # Set this for security!
+    volumes:
+      - aimharder-data:/data
+    ports:
+      - "${WEBHOOK_PORT:-8080}:8080"
+    entrypoint: ["/app/aimharder-sync"]
+    command: ["webhook", "--port", "8080", "--token", "${WEBHOOK_TOKEN:-}"]
+    profiles:
+      - webhook  # Only starts with: docker-compose --profile webhook up
 
 volumes:
   aimharder-data:

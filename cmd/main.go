@@ -63,6 +63,7 @@ Before using, you need to:
 		newFetchCmd(),
 		newExportCmd(),
 		newStatusCmd(),
+		newWebhookCmd(),
 		newVersionCmd(),
 	)
 
@@ -214,6 +215,43 @@ func newVersionCmd() *cobra.Command {
 			fmt.Println("aimharder-sync v1.0.0")
 		},
 	}
+}
+
+func newWebhookCmd() *cobra.Command {
+	var (
+		port      string
+		authToken string
+	)
+
+	cmd := &cobra.Command{
+		Use:   "webhook",
+		Short: "Start webhook server for remote sync triggers",
+		Long: `Start an HTTP server that listens for sync triggers.
+This allows you to trigger syncs from phone widgets, shortcuts, or other automation tools.
+
+Endpoints:
+  POST /sync         - Trigger a sync (optional: ?days=N)
+  GET  /status       - Get last sync result
+  GET  /health       - Health check
+
+Examples:
+  # Start webhook server on default port 8080
+  aimharder-sync webhook
+
+  # Start with custom port and auth token
+  aimharder-sync webhook --port 9090 --token mysecrettoken
+
+  # Trigger sync from phone (with curl)
+  curl -X POST http://your-server:8080/sync -H "X-Auth-Token: mysecrettoken"`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return RunWebhookServer(cfg, port, authToken)
+		},
+	}
+
+	cmd.Flags().StringVar(&port, "port", "8080", "port to listen on")
+	cmd.Flags().StringVar(&authToken, "token", "", "authentication token (optional but recommended)")
+
+	return cmd
 }
 
 // Command implementations
