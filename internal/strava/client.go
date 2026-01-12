@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -54,10 +55,10 @@ func NewClient(cfg *config.Config) (*Client, error) {
 		httpClient:  &http.Client{Timeout: 60 * time.Second},
 	}
 
-	// Try to load existing tokens
 	if err := client.loadTokens(); err != nil {
-		// Tokens not found is OK - user will need to authenticate
-		fmt.Printf("Note: No existing Strava tokens found. Run 'auth strava' to authenticate.\n")
+		if cfg.Strava.RefreshToken == "" {
+			fmt.Printf("Note: No existing Strava tokens found. Run 'auth strava' to authenticate.\n")
+		}
 	}
 
 	return client, nil
@@ -145,16 +146,21 @@ func (c *Client) RefreshTokens(ctx context.Context) error {
 	return c.saveTokens()
 }
 
-// EnsureValidToken ensures we have a valid access token
 func (c *Client) EnsureValidToken(ctx context.Context) error {
-	if !c.IsAuthenticated() {
-		return fmt.Errorf("not authenticated with Strava - run 'auth strava' first")
+	if c.tokens == nil {
+		return fmt.Errorf("not authenticated with Strava - run 'auth strava' first or set STRAVA_REFRESH_TOKEN")
 	}
 
-	if c.NeedsRefresh() {
+	if c.tokens.RefreshToken != "" && (c.tokens.AccessToken == "" || c.NeedsRefresh()) {
+		fmt.Println("  🔄 Refreshing Strava access token...")
 		if err := c.RefreshTokens(ctx); err != nil {
 			return fmt.Errorf("failed to refresh Strava token: %w", err)
 		}
+		fmt.Println("  ✓ Token refreshed successfully")
+	}
+
+	if c.tokens.AccessToken == "" {
+		return fmt.Errorf("no valid Strava access token available")
 	}
 
 	return nil
@@ -166,6 +172,32 @@ func (c *Client) UploadActivity(ctx context.Context, tcxPath string, workout *mo
 		return nil, err
 	}
 
+	resp, err := c.doUpload(ctx, tcxPath, workout)
+	if err != nil {
+		if isUnauthorizedError(err) {
+			fmt.Println("  ⚠️  Token expired, refreshing...")
+			if refreshErr := c.RefreshTokens(ctx); refreshErr != nil {
+				return nil, fmt.Errorf("upload failed and token refresh failed: %w", refreshErr)
+			}
+			fmt.Println("  ✓ Token refreshed, retrying upload...")
+			return c.doUpload(ctx, tcxPath, workout)
+		}
+		return nil, err
+	}
+	return resp, nil
+}
+
+// isUnauthorizedError checks if the error indicates a 401 Unauthorized
+func isUnauthorizedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "401") || strings.Contains(errStr, "Unauthorized")
+}
+
+// doUpload performs the actual upload request
+func (c *Client) doUpload(ctx context.Context, tcxPath string, workout *models.Workout) (*UploadResponse, error) {
 	// Open the TCX file
 	file, err := os.Open(tcxPath)
 	if err != nil {
@@ -447,23 +479,30 @@ func (c *Client) mapWorkoutType(workoutType models.WorkoutType) string {
 	}
 }
 
-// loadTokens loads tokens from file
+// loadTokens loads tokens from file or falls back to config/environment
 func (c *Client) loadTokens() error {
 	data, err := os.ReadFile(c.tokenFile)
-	if err != nil {
-		return err
+	if err == nil {
+		var allTokens struct {
+			Strava *models.StravaTokens `json:"strava"`
+		}
+
+		if err := json.Unmarshal(data, &allTokens); err == nil && allTokens.Strava != nil {
+			c.tokens = allTokens.Strava
+			return nil
+		}
 	}
 
-	var allTokens struct {
-		Strava *models.StravaTokens `json:"strava"`
+	if c.config.Strava.RefreshToken != "" {
+		c.tokens = &models.StravaTokens{
+			AccessToken:  c.config.Strava.AccessToken,
+			RefreshToken: c.config.Strava.RefreshToken,
+			ExpiresAt:    time.Now().Add(-1 * time.Hour),
+		}
+		return nil
 	}
 
-	if err := json.Unmarshal(data, &allTokens); err != nil {
-		return err
-	}
-
-	c.tokens = allTokens.Strava
-	return nil
+	return fmt.Errorf("no tokens found")
 }
 
 // saveTokens saves tokens to file

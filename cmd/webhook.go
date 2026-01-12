@@ -93,7 +93,6 @@ func (s *WebhookServer) Start(ctx context.Context) error {
 
 // handleSync handles sync requests
 func (s *WebhookServer) handleSync(w http.ResponseWriter, r *http.Request) {
-	// Check auth token if configured
 	if s.authToken != "" {
 		token := r.Header.Get("X-Auth-Token")
 		if token == "" {
@@ -105,7 +104,6 @@ func (s *WebhookServer) handleSync(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Try to acquire lock (non-blocking)
 	if !s.syncMutex.TryLock() {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusConflict)
@@ -245,9 +243,9 @@ func (s *WebhookServer) runSync(ctx context.Context, days int) *SyncResult {
 		return result
 	}
 
-	if !stravaClient.IsAuthenticated() {
+	if err := stravaClient.EnsureValidToken(ctx); err != nil {
 		result.Success = false
-		result.Message = "Not authenticated with Strava"
+		result.Message = fmt.Sprintf("Strava authentication failed: %v", err)
 		return result
 	}
 

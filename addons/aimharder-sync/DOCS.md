@@ -176,11 +176,7 @@ Go to **Settings → Add-ons → AimHarder Sync → Log** tab
    - Verify your AimHarder credentials
    - Try increasing `sync_days`
 
-4. **Stuck after "Authentication successful"**
-   - Make sure `aimharder_user_id` is set correctly
-   - Check the add-on logs for error messages
-
-5. **Webhook returns 401**
+4. **Webhook returns 401**
    - Verify the `X-Auth-Token` header matches your `webhook_token`
 
 ## Data Storage

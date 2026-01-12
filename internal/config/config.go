@@ -33,7 +33,8 @@ type StravaConfig struct {
 	ClientID     string `mapstructure:"client_id"`
 	ClientSecret string `mapstructure:"client_secret"`
 	RedirectURI  string `mapstructure:"redirect_uri"`
-	// Tokens are stored separately for security
+	AccessToken  string `mapstructure:"access_token"`
+	RefreshToken string `mapstructure:"refresh_token"`
 }
 
 // StorageConfig holds storage paths
@@ -122,6 +123,8 @@ func Load(configPath string) (*Config, error) {
 	v.BindEnv("aimharder.family_id", "AIMHARDER_FAMILY_ID")
 	v.BindEnv("strava.client_id", "STRAVA_CLIENT_ID")
 	v.BindEnv("strava.client_secret", "STRAVA_CLIENT_SECRET")
+	v.BindEnv("strava.access_token", "STRAVA_ACCESS_TOKEN")
+	v.BindEnv("strava.refresh_token", "STRAVA_REFRESH_TOKEN")
 	v.BindEnv("storage.data_dir", "AIMHARDER_STORAGE_DATA_DIR")
 	v.BindEnv("storage.tokens_file", "AIMHARDER_STORAGE_TOKENS_FILE")
 	v.BindEnv("storage.history_file", "AIMHARDER_STORAGE_HISTORY_FILE")

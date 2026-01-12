@@ -483,8 +483,8 @@ func syncToStrava(ctx context.Context, cfg *config.Config, workouts []models.Wor
 		return fmt.Errorf("failed to create Strava client: %w", err)
 	}
 
-	if !stravaClient.IsAuthenticated() {
-		return fmt.Errorf("not authenticated with Strava - run 'aimharder-sync auth' first")
+	if err := stravaClient.EnsureValidToken(ctx); err != nil {
+		return fmt.Errorf("Strava authentication failed: %w (run 'aimharder-sync auth' or set STRAVA_REFRESH_TOKEN)", err)
 	}
 
 	// Find the date range of workouts we're syncing
@@ -914,8 +914,14 @@ func runStatus() error {
 		fmt.Printf("   Client ID: %s\n", cfg.Strava.ClientID)
 
 		stravaClient, err := strava.NewClient(cfg)
-		if err == nil && stravaClient.IsAuthenticated() {
-			fmt.Println("   ✅ Authenticated")
+		if err == nil {
+			if stravaClient.IsAuthenticated() {
+				fmt.Println("   ✅ Authenticated")
+			} else if cfg.Strava.RefreshToken != "" {
+				fmt.Println("   🔄 Has refresh token (will authenticate on first use)")
+			} else {
+				fmt.Println("   ❌ Not authenticated (run 'auth' or set STRAVA_REFRESH_TOKEN)")
+			}
 		} else {
 			fmt.Println("   ❌ Not authenticated (run 'auth')")
 		}
