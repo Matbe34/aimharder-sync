@@ -23,6 +23,7 @@ if [ ! -f "$CONFIG_PATH" ]; then
     WEBHOOK_PORT="${WEBHOOK_PORT:-8080}"
     WEBHOOK_TOKEN="${WEBHOOK_TOKEN:-}"
     SYNC_DAYS="${SYNC_DAYS:-1}"
+    DEFAULT_DURATION="${DEFAULT_DURATION:-60}"
     CHECK_INTERVAL="${CHECK_INTERVAL:-60}"
     QUIET_HOURS_START="${QUIET_HOURS_START:-0}"
     QUIET_HOURS_END="${QUIET_HOURS_END:-6}"
@@ -43,6 +44,7 @@ else
     WEBHOOK_TOKEN=$(jq -r '.webhook_token' $CONFIG_PATH)
     WEBHOOK_PORT=$(jq -r '.webhook_port' $CONFIG_PATH)
     SYNC_DAYS=$(jq -r '.sync_days' $CONFIG_PATH)
+    DEFAULT_DURATION=$(jq -r '.default_duration // 60' $CONFIG_PATH)
     CHECK_INTERVAL=$(jq -r '.check_interval' $CONFIG_PATH)
     QUIET_HOURS_START=$(jq -r '.quiet_hours_start' $CONFIG_PATH)
     QUIET_HOURS_END=$(jq -r '.quiet_hours_end' $CONFIG_PATH)
@@ -61,6 +63,7 @@ export AIMHARDER_EMAIL
 export AIMHARDER_PASSWORD
 export AIMHARDER_BOX_ID
 export AIMHARDER_USER_ID
+export AIMHARDER_DEFAULT_DURATION="${DEFAULT_DURATION}m"
 export DATA_DIR
 
 # Create data directory
@@ -90,6 +93,7 @@ fi
 echo "Configuration loaded successfully"
 echo "  - Webhook Port: $WEBHOOK_PORT"
 echo "  - Sync Days: $SYNC_DAYS"
+echo "  - Default Duration: ${DEFAULT_DURATION}m"
 echo "  - Scheduler Enabled: $ENABLE_SCHEDULER"
 echo "  - Check Interval: ${CHECK_INTERVAL}s"
 echo "  - Quiet Hours: $QUIET_HOURS_START:00 - $QUIET_HOURS_END:00"

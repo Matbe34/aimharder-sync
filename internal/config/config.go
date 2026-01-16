@@ -47,7 +47,8 @@ type StorageConfig struct {
 
 // SyncConfig holds sync preferences
 type SyncConfig struct {
-	DefaultDays       int           `mapstructure:"default_days"` // How many days back to sync by default
+	DefaultDays       int           `mapstructure:"default_days"`      // How many days back to sync by default
+	DefaultDuration   time.Duration `mapstructure:"default_duration"`  // Default workout duration for Strava (default 1h)
 	RetryAttempts     int           `mapstructure:"retry_attempts"`
 	RetryDelay        time.Duration `mapstructure:"retry_delay"`
 	ActivityType      string        `mapstructure:"activity_type"`    // Default Strava activity type
@@ -78,6 +79,7 @@ func DefaultConfig() *Config {
 		},
 		Sync: SyncConfig{
 			DefaultDays:       30,
+			DefaultDuration:   60 * time.Minute,
 			RetryAttempts:     3,
 			RetryDelay:        5 * time.Second,
 			ActivityType:      "crossfit",
@@ -104,6 +106,7 @@ func Load(configPath string) (*Config, error) {
 	v.SetDefault("storage.history_file", cfg.Storage.HistoryFile)
 	v.SetDefault("storage.tcx_dir", cfg.Storage.TCXDir)
 	v.SetDefault("sync.default_days", cfg.Sync.DefaultDays)
+	v.SetDefault("sync.default_duration", cfg.Sync.DefaultDuration)
 	v.SetDefault("sync.retry_attempts", cfg.Sync.RetryAttempts)
 	v.SetDefault("sync.retry_delay", cfg.Sync.RetryDelay)
 	v.SetDefault("sync.activity_type", cfg.Sync.ActivityType)
@@ -129,6 +132,7 @@ func Load(configPath string) (*Config, error) {
 	v.BindEnv("storage.tokens_file", "AIMHARDER_STORAGE_TOKENS_FILE")
 	v.BindEnv("storage.history_file", "AIMHARDER_STORAGE_HISTORY_FILE")
 	v.BindEnv("storage.tcx_dir", "AIMHARDER_STORAGE_TCX_DIR")
+	v.BindEnv("sync.default_duration", "AIMHARDER_DEFAULT_DURATION")
 
 	// Try to read config file if it exists
 	if configPath != "" {

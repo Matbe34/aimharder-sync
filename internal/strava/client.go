@@ -131,7 +131,9 @@ func (c *Client) RefreshTokens(ctx context.Context) error {
 		Expiry:       c.tokens.ExpiresAt,
 	}
 
-	tokenSource := c.oauthConfig.TokenSource(ctx, token)
+	// Use our httpClient with timeout for the oauth2 token refresh
+	ctxWithClient := context.WithValue(ctx, oauth2.HTTPClient, c.httpClient)
+	tokenSource := c.oauthConfig.TokenSource(ctxWithClient, token)
 	newToken, err := tokenSource.Token()
 	if err != nil {
 		return fmt.Errorf("failed to refresh token: %w", err)

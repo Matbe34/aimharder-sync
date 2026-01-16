@@ -16,17 +16,17 @@ import (
 
 // TrainingCenterDatabase is the root element
 type TrainingCenterDatabase struct {
-	XMLName           xml.Name   `xml:"TrainingCenterDatabase"`
-	XSI               string     `xml:"xmlns:xsi,attr"`
-	XSD               string     `xml:"xmlns:xsd,attr"`
-	NS                string     `xml:"xmlns,attr"`
-	NS2               string     `xml:"xmlns:ns2,attr,omitempty"`
-	NS3               string     `xml:"xmlns:ns3,attr,omitempty"`
-	NS4               string     `xml:"xmlns:ns4,attr,omitempty"`
-	NS5               string     `xml:"xmlns:ns5,attr,omitempty"`
-	SchemaLocation    string     `xml:"xsi:schemaLocation,attr,omitempty"`
-	Activities        *Activities `xml:"Activities,omitempty"`
-	Author            *Author     `xml:"Author,omitempty"`
+	XMLName        xml.Name    `xml:"TrainingCenterDatabase"`
+	XSI            string      `xml:"xmlns:xsi,attr"`
+	XSD            string      `xml:"xmlns:xsd,attr"`
+	NS             string      `xml:"xmlns,attr"`
+	NS2            string      `xml:"xmlns:ns2,attr,omitempty"`
+	NS3            string      `xml:"xmlns:ns3,attr,omitempty"`
+	NS4            string      `xml:"xmlns:ns4,attr,omitempty"`
+	NS5            string      `xml:"xmlns:ns5,attr,omitempty"`
+	SchemaLocation string      `xml:"xsi:schemaLocation,attr,omitempty"`
+	Activities     *Activities `xml:"Activities,omitempty"`
+	Author         *Author     `xml:"Author,omitempty"`
 }
 
 // Activities container
@@ -45,17 +45,17 @@ type Activity struct {
 
 // Lap represents a lap within an activity
 type Lap struct {
-	StartTime       string    `xml:"StartTime,attr"`
-	TotalTimeSeconds float64  `xml:"TotalTimeSeconds"`
-	DistanceMeters  float64   `xml:"DistanceMeters"`
-	Calories        int       `xml:"Calories,omitempty"`
-	AverageHeartRateBpm *HeartRate `xml:"AverageHeartRateBpm,omitempty"`
-	MaximumHeartRateBpm *HeartRate `xml:"MaximumHeartRateBpm,omitempty"`
-	Intensity       string    `xml:"Intensity"`
-	TriggerMethod   string    `xml:"TriggerMethod"`
-	Track           *Track    `xml:"Track,omitempty"`
-	Notes           string    `xml:"Notes,omitempty"`
-	Extensions      *LapExtensions `xml:"Extensions,omitempty"`
+	StartTime           string         `xml:"StartTime,attr"`
+	TotalTimeSeconds    float64        `xml:"TotalTimeSeconds"`
+	DistanceMeters      float64        `xml:"DistanceMeters"`
+	Calories            int            `xml:"Calories,omitempty"`
+	AverageHeartRateBpm *HeartRate     `xml:"AverageHeartRateBpm,omitempty"`
+	MaximumHeartRateBpm *HeartRate     `xml:"MaximumHeartRateBpm,omitempty"`
+	Intensity           string         `xml:"Intensity"`
+	TriggerMethod       string         `xml:"TriggerMethod"`
+	Track               *Track         `xml:"Track,omitempty"`
+	Notes               string         `xml:"Notes,omitempty"`
+	Extensions          *LapExtensions `xml:"Extensions,omitempty"`
 }
 
 // Track contains trackpoints
@@ -65,10 +65,10 @@ type Track struct {
 
 // Trackpoint represents a single data point
 type Trackpoint struct {
-	Time           string     `xml:"Time"`
-	HeartRateBpm   *HeartRate `xml:"HeartRateBpm,omitempty"`
-	Cadence        int        `xml:"Cadence,omitempty"`
-	Extensions     *TrackpointExtensions `xml:"Extensions,omitempty"`
+	Time         string                `xml:"Time"`
+	HeartRateBpm *HeartRate            `xml:"HeartRateBpm,omitempty"`
+	Cadence      int                   `xml:"Cadence,omitempty"`
+	Extensions   *TrackpointExtensions `xml:"Extensions,omitempty"`
 }
 
 // HeartRate holds heart rate value
@@ -78,10 +78,10 @@ type HeartRate struct {
 
 // Device information
 type Device struct {
-	XSIType   string `xml:"xsi:type,attr"`
-	Name      string `xml:"Name"`
-	UnitId    string `xml:"UnitId"`
-	ProductID int    `xml:"ProductID"`
+	XSIType   string   `xml:"xsi:type,attr"`
+	Name      string   `xml:"Name"`
+	UnitId    string   `xml:"UnitId"`
+	ProductID int      `xml:"ProductID"`
 	Version   *Version `xml:"Version,omitempty"`
 }
 
@@ -95,10 +95,10 @@ type Version struct {
 
 // Author information
 type Author struct {
-	XSIType string   `xml:"xsi:type,attr"`
-	Name    string   `xml:"Name"`
-	Build   *Build   `xml:"Build,omitempty"`
-	LangID  string   `xml:"LangID,omitempty"`
+	XSIType    string `xml:"xsi:type,attr"`
+	Name       string `xml:"Name"`
+	Build      *Build `xml:"Build,omitempty"`
+	LangID     string `xml:"LangID,omitempty"`
 	PartNumber string `xml:"PartNumber,omitempty"`
 }
 
@@ -114,11 +114,11 @@ type LapExtensions struct {
 
 // LX extensions namespace
 type LX struct {
-	XMLNS      string `xml:"xmlns,attr,omitempty"`
-	AvgSpeed   float64 `xml:"AvgSpeed,omitempty"`
-	MaxSpeed   float64 `xml:"MaxSpeed,omitempty"`
-	AvgWatts   int     `xml:"AvgWatts,omitempty"`
-	MaxWatts   int     `xml:"MaxWatts,omitempty"`
+	XMLNS    string  `xml:"xmlns,attr,omitempty"`
+	AvgSpeed float64 `xml:"AvgSpeed,omitempty"`
+	MaxSpeed float64 `xml:"MaxSpeed,omitempty"`
+	AvgWatts int     `xml:"AvgWatts,omitempty"`
+	MaxWatts int     `xml:"MaxWatts,omitempty"`
 }
 
 // TrackpointExtensions for additional trackpoint data
@@ -128,20 +128,25 @@ type TrackpointExtensions struct {
 
 // TPX extensions
 type TPX struct {
-	XMLNS  string  `xml:"xmlns,attr,omitempty"`
-	Speed  float64 `xml:"Speed,omitempty"`
-	Watts  int     `xml:"Watts,omitempty"`
+	XMLNS string  `xml:"xmlns,attr,omitempty"`
+	Speed float64 `xml:"Speed,omitempty"`
+	Watts int     `xml:"Watts,omitempty"`
 }
 
 // Generator creates TCX files from workouts
 type Generator struct {
-	outputDir string
+	outputDir       string
+	defaultDuration time.Duration
 }
 
 // NewGenerator creates a new TCX generator
-func NewGenerator(outputDir string) *Generator {
+func NewGenerator(outputDir string, defaultDuration time.Duration) *Generator {
+	if defaultDuration == 0 {
+		defaultDuration = 60 * time.Minute
+	}
 	return &Generator{
-		outputDir: outputDir,
+		outputDir:       outputDir,
+		defaultDuration: defaultDuration,
 	}
 }
 
@@ -200,15 +205,9 @@ func (g *Generator) workoutToTCX(workout *models.Workout) *TrainingCenterDatabas
 	startTime := g.getStartTime(workout)
 	startTimeStr := startTime.Format(time.RFC3339)
 
-	// Calculate duration
-	duration := workout.Duration
-	if duration == 0 {
-		duration = 60 * time.Minute // Default to 60 minutes
-	}
-
-	// If we have a result with time, use that as actual duration
-	if workout.Result != nil && workout.Result.Time != nil {
-		duration = *workout.Result.Time
+	duration := g.defaultDuration
+	if workout.Duration > 0 {
+		duration = workout.Duration
 	}
 
 	// Build notes/description
@@ -237,12 +236,21 @@ func (g *Generator) workoutToTCX(workout *models.Workout) *TrainingCenterDatabas
 		}
 	}
 
-	// Add minimal track with start/end points to ensure Strava processes it
-	lap.Track = &Track{
-		Trackpoint: []Trackpoint{
-			{Time: startTimeStr},
-			{Time: startTime.Add(duration).Format(time.RFC3339)},
-		},
+	// Default calories if not set (Strava doesn't always use TCX calories, but worth trying)
+	if lap.Calories == 0 {
+		lap.Calories = 400
+	}
+
+	// Generate trackpoints with simulated heart rate for better Strava calorie calculation
+	// CrossFit typical HR: warm-up ~120, working ~155, peaks ~175
+	lap.Track = generateTrackpointsWithHR(startTime, duration)
+
+	// Set average/max HR on lap level too
+	if lap.AverageHeartRateBpm == nil {
+		lap.AverageHeartRateBpm = &HeartRate{Value: 150}
+	}
+	if lap.MaximumHeartRateBpm == nil {
+		lap.MaximumHeartRateBpm = &HeartRate{Value: 175}
 	}
 
 	// Build activity
@@ -358,11 +366,11 @@ func (g *Generator) buildNotes(workout *models.Workout) string {
 	// Add result
 	if workout.Result != nil {
 		parts = append(parts, "\n🎯 Result:")
-		
+
 		if workout.Result.Time != nil {
 			parts = append(parts, fmt.Sprintf("  ⏱️ Time: %s", formatDuration(*workout.Result.Time)))
 		}
-		
+
 		if workout.Result.Rounds > 0 {
 			if workout.Result.Reps > 0 {
 				parts = append(parts, fmt.Sprintf("  🔄 Rounds: %d + %d reps", workout.Result.Rounds, workout.Result.Reps))
@@ -370,11 +378,11 @@ func (g *Generator) buildNotes(workout *models.Workout) string {
 				parts = append(parts, fmt.Sprintf("  🔄 Rounds: %d", workout.Result.Rounds))
 			}
 		}
-		
+
 		if workout.Result.Weight > 0 {
 			parts = append(parts, fmt.Sprintf("  🏋️ Weight: %.1f kg", workout.Result.Weight))
 		}
-		
+
 		if workout.Result.Score != "" && workout.Result.Time == nil && workout.Result.Rounds == 0 {
 			parts = append(parts, fmt.Sprintf("  📊 Score: %s", workout.Result.Score))
 		}
@@ -461,4 +469,81 @@ func sanitizeFilename(name string) string {
 	}
 
 	return result
+}
+
+// generateTrackpointsWithHR creates trackpoints with simulated heart rate data
+// This helps Strava calculate more accurate calories for CrossFit workouts
+// Pattern: warm-up (5 min, ~120 bpm) -> working (main, ~155 bpm with peaks) -> cool-down (5 min, ~130 bpm)
+func generateTrackpointsWithHR(startTime time.Time, duration time.Duration) *Track {
+	trackpoints := []Trackpoint{}
+
+	// Generate a trackpoint every 30 seconds
+	totalSeconds := int(duration.Seconds())
+	numPoints := totalSeconds / 30
+	if numPoints < 4 {
+		numPoints = 4 // Minimum 4 points
+	}
+	if numPoints > 120 {
+		numPoints = 120 // Max 1 hour of 30s intervals
+	}
+
+	warmupDuration := 5 * 60   // 5 minutes warm-up
+	cooldownDuration := 5 * 60 // 5 minutes cool-down
+
+	for i := 0; i <= numPoints; i++ {
+		elapsed := i * 30 // seconds elapsed
+		pointTime := startTime.Add(time.Duration(elapsed) * time.Second)
+
+		// Calculate heart rate based on workout phase
+		var hr int
+		if elapsed < warmupDuration {
+			// Warm-up: 110 -> 140 bpm
+			progress := float64(elapsed) / float64(warmupDuration)
+			hr = 110 + int(progress*30)
+		} else if elapsed > totalSeconds-cooldownDuration {
+			// Cool-down: 160 -> 120 bpm
+			cooldownElapsed := elapsed - (totalSeconds - cooldownDuration)
+			progress := float64(cooldownElapsed) / float64(cooldownDuration)
+			hr = 160 - int(progress*40)
+		} else {
+			// Working phase: 145-170 bpm with variation
+			// Use simple sine wave for natural variation
+			phase := float64(elapsed) / 60.0 // cycles per minute
+			variation := int(12 * (0.5 + 0.5*sinApprox(phase*2)))
+			hr = 148 + variation
+		}
+
+		// Add some randomness (+/- 3 bpm)
+		hr += (elapsed % 7) - 3
+
+		// Clamp to reasonable range
+		if hr < 100 {
+			hr = 100
+		}
+		if hr > 185 {
+			hr = 185
+		}
+
+		trackpoints = append(trackpoints, Trackpoint{
+			Time:         pointTime.Format(time.RFC3339),
+			HeartRateBpm: &HeartRate{Value: hr},
+		})
+	}
+
+	return &Track{Trackpoint: trackpoints}
+}
+
+// sinApprox is a simple sine approximation without importing math
+func sinApprox(x float64) float64 {
+	// Normalize to 0-2π range approximation
+	for x > 6.28 {
+		x -= 6.28
+	}
+	for x < 0 {
+		x += 6.28
+	}
+	// Simple Taylor series approximation
+	x3 := x * x * x
+	x5 := x3 * x * x
+	return x - x3/6 + x5/120
 }

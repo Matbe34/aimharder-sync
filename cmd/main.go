@@ -314,25 +314,12 @@ func runSync(days int, startDate, endDate string, force bool) error {
 
 	fmt.Printf("📋 Found %d workouts\n", len(workouts))
 
-	history := loadSyncHistory(cfg.Storage.HistoryFile)
-
-	var toSync []models.Workout
-	for _, w := range workouts {
-		if force || !isWorkoutSynced(history, w.ID) {
-			toSync = append(toSync, w)
-		}
-	}
-
-	if len(toSync) == 0 {
-		fmt.Println("✅ All workouts already synced!")
-		return nil
-	}
-
-	fmt.Printf("🔄 %d workouts to sync\n", len(toSync))
+	toSync := workouts
+	history := make(map[string][]models.SyncStatus)
 
 	// Generate TCX files
 	fmt.Println("📝 Generating TCX files...")
-	tcxGen := tcx.NewGenerator(cfg.Storage.TCXDir)
+	tcxGen := tcx.NewGenerator(cfg.Storage.TCXDir, cfg.Sync.DefaultDuration)
 	tcxFiles, err := tcxGen.GenerateAll(toSync)
 	if err != nil {
 		return fmt.Errorf("failed to generate TCX files: %w", err)
@@ -883,7 +870,7 @@ func runExport(days int, startDate, endDate, outputDir string) error {
 	fmt.Printf("📋 Found %d workouts\n", len(workouts))
 	fmt.Println("📝 Generating TCX files...")
 
-	tcxGen := tcx.NewGenerator(outputDir)
+	tcxGen := tcx.NewGenerator(outputDir, cfg.Sync.DefaultDuration)
 	files, err := tcxGen.GenerateAll(workouts)
 	if err != nil {
 		return fmt.Errorf("failed to generate TCX files: %w", err)
@@ -979,12 +966,10 @@ func parseDateRange(days int, startDate, endDate string) (time.Time, time.Time, 
 
 func loadSyncHistory(filepath string) map[string][]models.SyncStatus {
 	history := make(map[string][]models.SyncStatus)
-
 	data, err := os.ReadFile(filepath)
 	if err != nil {
 		return history
 	}
-
 	json.Unmarshal(data, &history)
 	return history
 }
@@ -996,21 +981,6 @@ func saveSyncHistory(filepath string, history map[string][]models.SyncStatus) er
 	}
 
 	return os.WriteFile(filepath, data, 0644)
-}
-
-func isWorkoutSynced(history map[string][]models.SyncStatus, workoutID string) bool {
-	statuses, ok := history[workoutID]
-	if !ok {
-		return false
-	}
-
-	for _, s := range statuses {
-		if s.Success {
-			return true
-		}
-	}
-
-	return false
 }
 
 func recordSync(history map[string][]models.SyncStatus, workoutID, externalID string, success bool, errorMsg string) {

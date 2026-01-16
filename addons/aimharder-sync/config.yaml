@@ -36,6 +36,7 @@ options:
   webhook_token: ""
   webhook_port: 8080
   sync_days: 1
+  default_duration: 60
   check_interval: 60
   quiet_hours_start: 0
   quiet_hours_end: 6
@@ -53,6 +54,7 @@ schema:
   webhook_token: password
   webhook_port: port
   sync_days: int(1,30)
+  default_duration: int(10,180)
   check_interval: int(30,3600)
   quiet_hours_start: int(0,23)
   quiet_hours_end: int(0,23)

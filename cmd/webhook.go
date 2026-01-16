@@ -210,24 +210,11 @@ func (s *WebhookServer) runSync(ctx context.Context, days int) *SyncResult {
 		return result
 	}
 
-	// Load sync history
-	history := loadSyncHistoryFromFile(s.cfg.Storage.HistoryFile)
-
-	// Filter already synced
-	var toSync []models.Workout
-	for _, w := range workouts {
-		if !isWorkoutSyncedInHistory(history, w.ID) {
-			toSync = append(toSync, w)
-		}
-	}
-
-	if len(toSync) == 0 {
-		result.Message = fmt.Sprintf("All %d workouts already synced", len(workouts))
-		return result
-	}
+	toSync := workouts
+	history := make(map[string][]models.SyncStatus)
 
 	// Generate TCX files
-	tcxGen := tcx.NewGenerator(s.cfg.Storage.TCXDir)
+	tcxGen := tcx.NewGenerator(s.cfg.Storage.TCXDir, s.cfg.Sync.DefaultDuration)
 	tcxFiles, err := tcxGen.GenerateAll(toSync)
 	if err != nil {
 		result.Success = false
@@ -328,36 +315,12 @@ func (s *WebhookServer) runSync(ctx context.Context, days int) *SyncResult {
 	return result
 }
 
-// Helper functions for sync history
-func loadSyncHistoryFromFile(filepath string) map[string][]models.SyncStatus {
-	history := make(map[string][]models.SyncStatus)
-	data, err := os.ReadFile(filepath)
-	if err != nil {
-		return history
-	}
-	json.Unmarshal(data, &history)
-	return history
-}
-
 func saveSyncHistoryToFile(filepath string, history map[string][]models.SyncStatus) error {
 	data, err := json.MarshalIndent(history, "", "  ")
 	if err != nil {
 		return err
 	}
 	return os.WriteFile(filepath, data, 0644)
-}
-
-func isWorkoutSyncedInHistory(history map[string][]models.SyncStatus, workoutID string) bool {
-	statuses, ok := history[workoutID]
-	if !ok {
-		return false
-	}
-	for _, s := range statuses {
-		if s.Success {
-			return true
-		}
-	}
-	return false
 }
 
 func recordSyncInHistory(history map[string][]models.SyncStatus, workoutID, externalID string, success bool, errorMsg string) {
