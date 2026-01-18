@@ -3,6 +3,7 @@ package tcx
 import (
 	"encoding/xml"
 	"fmt"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
@@ -238,7 +239,7 @@ func (g *Generator) workoutToTCX(workout *models.Workout) *TrainingCenterDatabas
 
 	// Default calories if not set (Strava doesn't always use TCX calories, but worth trying)
 	if lap.Calories == 0 {
-		lap.Calories = 400
+		lap.Calories = 400 + rand.Intn(201)
 	}
 
 	// Generate trackpoints with simulated heart rate for better Strava calorie calculation
@@ -490,6 +491,8 @@ func generateTrackpointsWithHR(startTime time.Time, duration time.Duration) *Tra
 	warmupDuration := 5 * 60   // 5 minutes warm-up
 	cooldownDuration := 5 * 60 // 5 minutes cool-down
 
+	intensityOffset := rand.Intn(26) - 10
+
 	for i := 0; i <= numPoints; i++ {
 		elapsed := i * 30 // seconds elapsed
 		pointTime := startTime.Add(time.Duration(elapsed) * time.Second)
@@ -513,8 +516,7 @@ func generateTrackpointsWithHR(startTime time.Time, duration time.Duration) *Tra
 			hr = 148 + variation
 		}
 
-		// Add some randomness (+/- 3 bpm)
-		hr += (elapsed % 7) - 3
+		hr += intensityOffset + rand.Intn(11) - 5
 
 		// Clamp to reasonable range
 		if hr < 100 {
